@@ -1,30 +1,44 @@
+import sys
+
 import pymupdf
 import os
+from dotenv import load_dotenv
+from openai import OpenAI
 
-pdf_file= '../chap04/data/소프트웨어사업영향평가_가이드라인_1810152.pdf'
-doc = pymupdf.open(pdf_file)
+from chap02 import client, response
 
-full_text = ''
+load_dotenv()
+api_key = os.getenv('API_KEY')
 
-header_height = 90
-footer_height = 100
+def summarize_txt(file_path : str):
+    client = OpenAI(api_key=api_key)
 
+    with open(file_path, 'r', encoding='utf-8') as f:
+        txt = f.read()
 
-for page in doc:
-    rect = page.rect
-    header = page.get_text(clip=(0, 0, rect.width, header_height))
-    footer = page.get_text(clip=(0, rect.height - footer_height, rect.width, rect.height))
-    text = page.get_text(clip=(0, header_height, rect.width, rect.height - footer_height))
-    full_text += text + '\n----------------------------------\n'
+    system_prompt = \
+    f'''
+    너는 다음 글을 요약하는 봇이다. 다음 글을 읽고, 저자의 문제 인식과 주장을 파악하고, 주요 내용을 요약하라.
+    
+    ============ 이하 텍스트 ===============
+    {txt}
+    '''
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0.1,
+        messages=[
+            {"role" : "system", "content" : "system_promt"}
+        ]
+    )
 
+    return response.choices[0].message.content
 
-    #text = page.get_text()
-    #full_text += text
+if __name__ == '__main__':
+    file_path = '../chap04/data/소프트웨어사업영향평가_가이드라인_1810152_with_preprocessing.txt'
+    result_file_path = '../chap04/data/소프트웨어사업영향평가_가이드라인_1810152_with_preprocessing_result.txt'
+    summary = summarize_txt(file_path)
+    print(summary)
 
-pdf_file_name = os.path.basename(pdf_file)
-pdf_file_name = os.path.splitext(pdf_file_name)[0] # 확장자 제거
-#txt_file_path = f'../chap04/data/{pdf_file_name}.txt'
+    with open(result_file_path, 'w', encoding='utf-8') as f:
+        f.write(summary)
 
-txt_file_path = f'../chap04/data/{pdf_file_name}_with_preprocessing.txt'
-with open(txt_file_path, 'w', encoding='utf-8') as f:
-    f.write(full_text)
