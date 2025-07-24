@@ -1,9 +1,8 @@
-from pyannote.audio.models.embedding.wespeaker.convert import model
-
 from gpt_functions import  get_current_time,tools
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+import json
 
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
@@ -36,8 +35,10 @@ while True :
         tool_name = tool_calls[0].function.name
         tool_call_id = tool_calls[0].id
 
+        arguments = json.loads(tool_calls[0].function.arguments)
+
         if tool_name == "get_current_time" :
-            messages.append({"role": "function", "name": tool_name, "content": get_current_time(), "tool_call_id": tool_call_id})
+            messages.append({"role": "function", "name": tool_name, "content": get_current_time(timezone=arguments['timezone']), "tool_call_id": tool_call_id})
 
         ai_response = get_ai_response(messages , tools=tools)
         ai_message = ai_response.choices[0].message
